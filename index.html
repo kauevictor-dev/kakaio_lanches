@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="192x192" href="img/favicon-192.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<meta name="theme-color" content="#17131d">
+<title>Kakaio Lanches — Cardápio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Kaushan+Script&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header><div class="wrap">
+  <div class="marca"><div class="logo" id="logo"><img src="img/selo.webp" alt="Kakaio Lanches Hamburgueria" width="443" height="390"></div><b id="nome" class="sr"></b></div>
+  <button class="pill" id="hCart">Carrinho <span id="hQtd"></span></button>
+</div></header>
+
+<section class="hero"><div class="wrap">
+  <h1 class="sr">Kakaio Lanches — Cardápio</h1>
+  <img class="selo" src="img/selo.webp" alt="Kakaio Lanches Hamburgueria" width="443" height="390">
+  <p class="lead">Escolha no cardápio, monte seu pedido e envie pelo WhatsApp. Receba em casa ou retire na hamburgueria.</p>
+  <button class="cta" id="ver">Ver cardápio</button>
+  <div class="info"><span class="st" id="stxt"></span><span id="end"></span></div>
+</div></section>
+
+<div class="fitaw"><div class="fita"><span>Hamburgueria</span><span>Lanches</span><span>Delivery próprio</span></div></div>
+
+<nav class="cats" aria-label="Categorias do cardápio"><div id="chips"></div></nav>
+
+<main class="wrap" id="cardapio"><p class="aviso" id="aviso" hidden></p><div id="grid"></div><div style="height:28px"></div></main>
+
+<div class="bar" id="bar" hidden><button class="btn" id="barBtn"><span id="barQtd"></span><span id="barTotal"></span></button></div>
+
+<dialog id="bv"><div class="bv"><div id="logo2"><img class="selo" src="img/selo.webp" alt="Kakaio Lanches Hamburgueria" width="443" height="390"></div><h3>Bem-vindo à Kakaio Lanches!</h3><p id="bvp"></p><button class="cta" id="bvok">Ver cardápio</button></div></dialog>
+<dialog id="pd"><div class="in" id="pdc"></div></dialog>
+
+<dialog id="cd"><div class="in">
+  <div class="hd"><h3>Seu pedido</h3><button class="x" data-close aria-label="Fechar">✕</button></div>
+  <div id="items"></div>
+  <fieldset><legend>Como você quer receber?</legend>
+    <label class="opt"><input type="radio" name="tipo" value="Entrega" checked><span>Entrega</span></label>
+    <label class="opt"><input type="radio" name="tipo" value="Retirada"><span>Retirada</span></label>
+    <div id="entrega">
+      <input type="text" id="rua" placeholder="Rua" autocomplete="address-line1">
+      <div class="g2"><input type="text" id="num" placeholder="Número"><input type="text" id="bairro" placeholder="Bairro"></div>
+      <input type="text" id="comp" placeholder="Complemento (opcional)">
+      <input type="text" id="ref" placeholder="Ponto de referência (opcional)">
+    </div>
+    <div class="caixa" id="retirada" hidden></div>
+  </fieldset>
+  <fieldset><legend>Seus dados</legend>
+    <input type="text" id="cli" placeholder="Seu nome" autocomplete="name" style="margin-top:0">
+    <input type="tel" id="tel" placeholder="Seu telefone com DDD" autocomplete="tel">
+    <input type="text" id="obs" placeholder="Observações do pedido (opcional)">
+  </fieldset>
+  <fieldset><legend>Pagamento</legend>
+    <label class="opt"><input type="radio" name="pag" value="Pix"><span>Pix</span></label>
+    <label class="opt"><input type="radio" name="pag" value="Cartão de crédito"><span>Cartão de crédito</span></label>
+    <label class="opt"><input type="radio" name="pag" value="Cartão de débito"><span>Cartão de débito</span></label>
+    <label class="opt"><input type="radio" name="pag" value="Dinheiro"><span>Dinheiro</span></label>
+    <div class="caixa" id="pix" hidden>O Pix é combinado pela conversa: depois de enviar o pedido, a Kakaio manda a chave no WhatsApp para você pagar.</div>
+    <div id="troco" hidden><input type="number" id="trocoVal" min="0" step="0.01" inputmode="decimal" placeholder="Troco para quanto? (vazio se não precisa)"></div>
+  </fieldset>
+  <div id="totais" style="margin-top:20px"></div>
+  <p id="erro" role="alert"></p>
+  <div class="foot"><button class="btn" id="enviar">Enviar pedido pelo WhatsApp</button></div>
+</div></dialog>
+
+<script src="js/config.js"></script>
+<script src="js/produtos.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
