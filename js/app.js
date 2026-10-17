@@ -13,6 +13,16 @@ const taxa=()=>tipo()==='Entrega'?CONFIG.taxaEntrega:0;
 
 /* ===== TOPO, STATUS, BOAS-VINDAS ===== */
 $('#nome').textContent=CONFIG.nome;$('#end').textContent='📍 '+CONFIG.endereco;
+function diasAbertos(){
+  const N=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'],ord=[1,2,3,4,5,6,0];
+  const f=x=>{const [a,b]=x.split(':');return a+'h'+(+b?b:'')};
+  const t=d=>CONFIG.horario[d]?f(CONFIG.horario[d][0])+' às '+f(CONFIG.horario[d][1]):null;
+  const g=[];
+  ord.forEach(d=>{const x=t(d);if(!x)return;const l=g[g.length-1];
+    if(l&&l.t===x&&l.fim===ord[ord.indexOf(d)-1])l.fim=d;else g.push({ini:d,fim:d,t:x})});
+  return g.map(l=>(l.ini===l.fim?N[l.ini]:N[l.ini]+' a '+N[l.fim])+': '+l.t).join(' · ');
+}
+if($('#dias'))$('#dias').textContent='🕒 '+diasAbertos();
 if(CONFIG.logo)['#logo','#logo2'].forEach(s=>{$(s).innerHTML=`<img src="${CONFIG.logo}" alt="${CONFIG.nome}">`});
 function status(){
   const d=new Date(),h=CONFIG.horario[d.getDay()];
