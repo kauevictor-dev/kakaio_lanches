@@ -20,7 +20,7 @@ function status(){
   const mn=x=>{const [a,b]=x.split(':');return +a*60+ +b};
   const m=d.getHours()*60+d.getMinutes();
   if(m<mn(h[0]))return'Fechado agora · abre às '+h[0];
-  if(m>=mn(h[1]))return'Fechado agora';
+  if(m>=(mn(h[1])||1440))return'Fechado agora';
   return'Aberto agora · até '+h[1];
 }
 {const s=status();$('#stxt').textContent=s;$('#stxt').classList.toggle('on',s.startsWith('Aberto'))}
