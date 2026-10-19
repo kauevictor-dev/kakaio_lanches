@@ -38,7 +38,8 @@ const CATS0=CATS.map(c=>c.n);
 /* ---------- login ---------- */
 async function entrar(){
   try{await auth.signInWithEmailAndPassword($('#em').value.trim(),$('#pw').value);iniciar()}
-  catch(e){$('#msg').textContent='E-mail ou senha incorretos.'}
+  catch(e){const m={'auth/invalid-credential':'E-mail ou senha incorretos, ou esse usuário não existe no Firebase.','auth/user-not-found':'Esse e-mail não existe em Authentication > Users.','auth/wrong-password':'Senha incorreta.','auth/invalid-email':'E-mail inválido.','auth/too-many-requests':'Muitas tentativas. Espere alguns minutos.','auth/network-request-failed':'Sem conexão com o Firebase.','auth/api-key-not-valid.-please-pass-a-valid-api-key.':'A apiKey do js/config.js está errada.','auth/invalid-api-key':'A apiKey do js/config.js está errada.','auth/operation-not-allowed':'Login por e-mail/senha não está ativado no Firebase.','auth/unauthorized-domain':'Domínio não autorizado: adicione-o em Authentication > Settings > Domínios autorizados.'};
+    $('#msg').textContent=(m[e.code]||'Erro')+' ('+e.code+')'}
 }
 $('#go').onclick=entrar;
 $('#sair').onclick=async()=>{await auth.signOut();location.reload()};
