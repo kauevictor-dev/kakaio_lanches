@@ -114,8 +114,9 @@ $('#items').addEventListener('click',e=>{
   save();renderBarra();renderCarrinho();
 });
 $('#retirada').textContent='Retire em: '+CONFIG.endereco;
+$('#mesaNum').innerHTML='<option value="">Escolha sua mesa</option>'+Array.from({length:CONFIG.mesas||20},(_,i)=>`<option value="${i+1}">Mesa ${i+1}</option>`).join('');
 cd.addEventListener('change',e=>{
-  if(e.target.name==='tipo'){const ent=tipo()==='Entrega';$('#entrega').hidden=!ent;$('#retirada').hidden=ent;renderCarrinho(true)}
+  if(e.target.name==='tipo'){const t=tipo();$('#entrega').hidden=t!=='Entrega';$('#retirada').hidden=t!=='Retirada';$('#mesa').hidden=t!=='Mesa';$('#tel').hidden=t==='Mesa';renderCarrinho(true)}
   if(e.target.name==='pag'){const v=e.target.value;$('#pix').hidden=v!=='Pix';$('#troco').hidden=v!=='Dinheiro'}
 });
 document.addEventListener('click',e=>{if(e.target.matches('[data-close]'))e.target.closest('dialog').close()});
@@ -135,8 +136,9 @@ function mensagem(){
   m+=`${L}\n`;
   if(ent)m+=`🛵 Taxa de entrega: ${brl(t)}\n`;
   m+=`*TOTAL: ${brl(subtotal()+t)}*\n\n`;
-  m+=`*👤 Cliente:* ${val('cli')}\n*📞 Contato:* ${val('tel')}\n`;
+  m+=`*👤 Cliente:* ${val('cli')}\n${tipo()==='Mesa'?'':`*📞 Contato:* ${val('tel')}\n`}`;
   if(ent){let e=`${val('rua')}, ${val('num')} - ${val('bairro')}`;if(val('comp'))e+=`, ${val('comp')}`;if(val('ref'))e+=` (Ref: ${val('ref')})`;m+=`*📍 Endereço:* ${e}\n`}
+  else if(tipo()==='Mesa')m+=`*🍽️ Pedido para a MESA ${val('mesaNum')}*\n`;
   else m+=`*📍 Retirada:* vou buscar na hamburgueria\n`;
   m+=`*💳 Pagamento:* ${pag}${pag==='Pix'?' (enviar a chave por mensagem)':''}`;
   if(pag==='Dinheiro'&&val('trocoVal'))m+=`\n*💵 Troco para:* ${brl(+val('trocoVal'))}`;
@@ -146,10 +148,13 @@ function mensagem(){
 $('#enviar').onclick=()=>{
   const erro=x=>{$('#erro').textContent=x;return false};
   if(!cart.length)return erro('Seu carrinho está vazio.');
-  if(!val('cli')||!val('tel'))return erro('Preencha seu nome e telefone.');
+  if(tipo()==='Mesa'){if(!val('cli')||!val('mesaNum'))return erro('Preencha seu nome e escolha a mesa.')}
+  else if(!val('cli')||!val('tel'))return erro('Preencha seu nome e telefone.');
   if(tipo()==='Entrega'&&(!val('rua')||!val('num')||!val('bairro')))return erro('Preencha rua, número e bairro para entrega.');
   if(!document.querySelector('[name=pag]:checked'))return erro('Escolha a forma de pagamento.');
   erro('');
+  const pr=cart.map(l=>{const p=prod(l.id);return{n:p.nome,q:l.qtd,v:unit(l),c:p.custo||0}});
+  window.salvarPedido&&salvarPedido({tipo:tipo(),mesa:tipo()==='Mesa'?+val('mesaNum'):null,cliente:val('cli'),pagamento:document.querySelector('[name=pag]:checked').value,total:subtotal()+taxa(),custo:pr.reduce((s,x)=>s+x.c*x.q,0),itens:pr});
   window.open(`https://api.whatsapp.com/send?phone=${CONFIG.whatsapp}&text=${encodeURIComponent(mensagem())}`,'_blank');
 };
 renderBarra();

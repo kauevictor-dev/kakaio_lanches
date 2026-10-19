@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Painel - Kakaio Lanches</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font:15px system-ui,sans-serif;background:#17131d;color:#f3eee6}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#241d2e;position:sticky;top:0}
+h1{font-size:17px;margin:0}main{padding:14px;max-width:760px;margin:auto}
+button,input,select,textarea{font:inherit;border-radius:10px;border:1px solid #4a3f58;background:#2b2336;color:inherit;padding:10px 12px}
+input,select,textarea{width:100%;margin:4px 0 10px}button{cursor:pointer;background:#ffc21a;color:#17131d;border:0;font-weight:700}
+button.s{background:#3a3048;color:#f3eee6}button.r{background:#c0392b;color:#fff}
+.tabs{display:flex;gap:8px;margin-bottom:14px}.tabs button{flex:1;background:#3a3048;color:#f3eee6}.tabs .on{background:#ffc21a;color:#17131d}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between;background:#241d2e;padding:10px 12px;border-radius:12px;margin-bottom:8px}
+.row small{opacity:.7;display:block}.off{opacity:.45}h2{font-size:15px;margin:18px 0 8px;color:#ffc21a}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:8px}.card{background:#241d2e;border-radius:12px;padding:12px}.card b{font-size:20px;display:block}
+dialog{border:0;border-radius:16px;background:#241d2e;color:#f3eee6;width:min(94vw,460px);max-height:92vh}dialog::backdrop{background:#000a}
+.bt{display:flex;gap:8px}.bt button{flex:1}#msg{color:#ff8a7a;min-height:20px}
+</style></head><body>
+<header><h1>🍔 Painel Kakaio</h1><button class="s" id="sair" hidden>Sair</button></header>
+<main>
+<section id="login"><h2>Entrar</h2><input id="em" type="email" placeholder="E-mail"><input id="pw" type="password" placeholder="Senha"><button id="go" style="width:100%">Entrar</button><p id="msg"></p></section>
+<section id="app" hidden>
+ <div class="tabs"><button data-t="card" class="on">Cardápio</button><button data-t="ped">Pedidos</button><button data-t="fin">Financeiro</button></div>
+ <div id="card"></div><div id="ped" hidden></div><div id="fin" hidden></div>
+</section></main>
+<dialog id="dlg"></dialog>
+<script src="js/config.js"></script><script src="js/produtos.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const $=s=>document.querySelector(s),brl=n=>(+n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+if(!CONFIG.firebase||!CONFIG.firebase.projectId){document.body.innerHTML='<main><h2>Falta configurar o Firebase em js/config.js</h2></main>'}
+firebase.initializeApp(CONFIG.firebase);
+const auth=firebase.auth(),db=firebase.firestore();
+const foto=f=>new Promise((ok,no)=>{const i=new Image,u=URL.createObjectURL(f);i.onload=()=>{const k=Math.min(1,720/i.width),c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',.7))};i.onerror=no;i.src=u});
+let prods=[];
+const CATS0=CATS.map(c=>c.n);
+
+/* ---------- login ---------- */
+async function entrar(){
+  try{await auth.signInWithEmailAndPassword($('#em').value.trim(),$('#pw').value);iniciar()}
+  catch(e){$('#msg').textContent='E-mail ou senha incorretos.'}
+}
+$('#go').onclick=entrar;
+$('#sair').onclick=async()=>{await auth.signOut();location.reload()};
+async function iniciar(){
+  const u=await new Promise(r=>{const un=auth.onAuthStateChanged(x=>{un();r(x)})});if(!u)return;
+  $('#login').hidden=true;$('#app').hidden=false;$('#sair').hidden=false;
+  await carregar();ped();fin();
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  ['card','ped','fin'].forEach(t=>$('#'+t).hidden=t!==b.dataset.t);
+  if(b.dataset.t==='ped')ped();if(b.dataset.t==='fin')fin();
+});
+
+/* ---------- cardápio ---------- */
+async function carregar(){
+  try{const s=await db.collection('produtos').orderBy('ordem').get();prods=s.docs.map(d=>({id:d.id,...d.data()}));render()}
+  catch(e){alert('Erro: '+e.message)}
+}
+function render(){
+  let h='<div class="bt" style="margin-bottom:12px"><button id="novo">+ Novo produto / combo</button>'+(prods.length?'':'<button class="s" id="imp">Importar cardápio atual</button>')+'</div>';
+  const cats=[...new Set([...CATS0,...prods.map(p=>p.cat)])].filter(c=>prods.some(p=>p.cat===c));
+  cats.forEach(c=>{h+=`<h2>${esc(c)}</h2>`;
+    prods.filter(p=>p.cat===c).forEach(p=>{h+=`<div class="row ${p.ativo?'':'off'}"><div><b>${esc(p.nome)}</b><small>${brl(p.preco)}${p.custo?' · custo '+brl(p.custo):''}${p.ativo?'':' · desativado'}</small></div><button class="s" data-e="${esc(p.id)}">Editar</button></div>`})});
+  $('#card').innerHTML=h;
+  $('#novo').onclick=()=>editar();
+  if($('#imp'))$('#imp').onclick=importar;
+  document.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>editar(b.dataset.e));
+}
+async function importar(){
+  const rows=PRODUTOS.map((p,i)=>({id:p.id,nome:p.nome,preco:p.preco,custo:0,cat:p.cat,descr:p.desc||'',img:p.img||null,ativo:true,combo:p.cat==='Combos',ordem:i,dados:{remover:p.remover,adicionais:p.adicionais,escolha:p.escolha}}));
+  try{const b=db.batch();rows.forEach(x=>b.set(db.collection('produtos').doc(x.id),x));await b.commit();carregar()}
+  catch(e){alert(e.message)}
+}
+const adTxt=a=>(a||[]).map(x=>x.nome+'='+x.preco).join(', ');
+const adArr=t=>t.split(',').map(s=>s.trim()).filter(Boolean).map(s=>{const [n,v]=s.split('=');return{nome:n.trim(),preco:parseFloat((v||'0').replace(',','.'))||0}});
+function editar(id){
+  const p=prods.find(x=>x.id===id)||{ativo:true,cat:'Combos',dados:{}};
+  const cats=[...new Set([...CATS0,...prods.map(x=>x.cat)])];
+  $('#dlg').innerHTML=`<h2>${id?'Editar':'Novo'} produto</h2>
+  <label>Nome</label><input id="fn" value="${esc(p.nome)}">
+  <label>Preço de venda (R$)</label><input id="fp" inputmode="decimal" value="${p.preco??''}">
+  <label>Custo do produto (R$) — usado no lucro</label><input id="fc" inputmode="decimal" value="${p.custo??0}">
+  <label>Categoria (Combos para criar um combo)</label><select id="fk">${cats.map(c=>`<option ${c===p.cat?'selected':''}>${esc(c)}</option>`).join('')}<option value="__n">+ Nova categoria…</option></select>
+  <label>Descrição (num combo, liste o que vem nele)</label><textarea id="fd" rows="3">${esc(p.descr)}</textarea>
+  <label>Adicionais (ex.: Bacon=3, Ovo=2)</label><input id="fa" value="${esc(adTxt(p.dados?.adicionais))}">
+  <label>Foto</label><input id="ff" type="file" accept="image/*"><input id="fi" placeholder="ou cole o link da foto" value="${esc(p.img||'')}">
+  <label><input type="checkbox" id="fv" ${p.ativo?'checked':''} style="width:auto"> Disponível no cardápio</label>
+  <p id="fe" style="color:#ff8a7a"></p>
+  <div class="bt"><button id="sv">Salvar</button><button class="s" id="cx">Cancelar</button>${id?'<button class="r" id="dl">Excluir</button>':''}</div>`;
+  $('#dlg').showModal();
+  $('#cx').onclick=()=>$('#dlg').close();
+  $('#fk').onchange=e=>{if(e.target.value==='__n'){const n=prompt('Nome da nova categoria:');if(n){e.target.insertAdjacentHTML('afterbegin',`<option selected>${esc(n)}</option>`)}else e.target.selectedIndex=0}};
+  if(id)$('#dl').onclick=async()=>{if(confirm('Excluir este produto?')){await db.collection('produtos').doc(id).delete();$('#dlg').close();carregar()}};
+  $('#sv').onclick=async()=>{
+    const nome=$('#fn').value.trim(),preco=parseFloat($('#fp').value.replace(',','.'));
+    if(!nome||isNaN(preco))return $('#fe').textContent='Preencha nome e preço.';
+    let img=$('#fi').value.trim()||null;const f=$('#ff').files[0];
+    if(f){
+      try{img=await foto(f)}catch(e){return $('#fe').textContent='Não consegui ler essa foto.'}}
+    const cat=$('#fk').value;
+    const row={id:id||nome.toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g,'')+Math.random().toString(36).slice(2,5),
+      nome,preco,custo:parseFloat($('#fc').value.replace(',','.'))||0,cat,descr:$('#fd').value.trim(),img,ativo:$('#fv').checked,combo:cat==='Combos',
+      ordem:p.ordem??prods.length,dados:{...(p.dados||{}),adicionais:adArr($('#fa').value)}};
+    try{await db.collection('produtos').doc(row.id).set(row)}catch(e){return $('#fe').textContent=e.message}
+    $('#dlg').close();carregar();
+  };
+}
+
+/* ---------- pedidos ---------- */
+async function ped(){
+  const ini=new Date();ini.setHours(0,0,0,0);
+  const data=(await db.collection('pedidos').where('criado','>=',ini).orderBy('criado','desc').get()).docs.map(d=>({id:d.id,...d.data(),criado:d.data().criado.toDate()}));
+  $('#ped').innerHTML='<h2>Pedidos de hoje</h2>'+((data||[]).map(o=>`<div class="row ${o.status==='cancelado'?'off':''}"><div><b>${o.tipo==='Mesa'?'Mesa '+o.mesa:esc(o.tipo)} · ${esc(o.cliente)}</b><small>${new Date(o.criado).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} · ${brl(o.total)} · ${esc(o.pagamento)} · ${esc(o.status)}</small><small>${(o.itens||[]).map(i=>i.q+'x '+esc(i.n)).join(', ')}</small></div>${o.status==='novo'?`<button class="s" data-s="pronto" data-i="${o.id}">Pronto</button>`:''}${o.status!=='cancelado'?`<button class="r" data-s="cancelado" data-i="${o.id}">✕</button>`:''}</div>`).join('')||'<p>Nenhum pedido hoje.</p>');
+  document.querySelectorAll('[data-s]').forEach(b=>b.onclick=async()=>{await db.collection('pedidos').doc(b.dataset.i).update({status:b.dataset.s});ped();fin()});
+}
+
+/* ---------- financeiro ---------- */
+let per='hoje';
+async function fin(){
+  const d=new Date();d.setHours(0,0,0,0);
+  if(per==='7')d.setDate(d.getDate()-6);if(per==='30')d.setDate(d.getDate()-29);if(per==='mes')d.setDate(1);
+  const dia=d.toLocaleDateString('sv');
+  const [o,x]=await Promise.all([db.collection('pedidos').where('criado','>=',d).get(),db.collection('despesas').where('data','>=',dia).orderBy('data','desc').get()]);
+  const P=o.docs.map(q=>q.data()).filter(p=>p.status!=='cancelado'),X=x.docs.map(q=>({id:q.id,...q.data()}));
+  const fat=P.reduce((s,p)=>s+ +p.total,0),cus=P.reduce((s,p)=>s+ +p.custo,0),des=X.reduce((s,p)=>s+ +p.valor,0),luc=fat-cus-des;
+  const top={};P.forEach(p=>(p.itens||[]).forEach(i=>top[i.n]=(top[i.n]||0)+i.q));
+  const tops=Object.entries(top).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  $('#fin').innerHTML=`<select id="per">${[['hoje','Hoje'],['7','Últimos 7 dias'],['30','Últimos 30 dias'],['mes','Este mês']].map(([v,t])=>`<option value="${v}" ${v===per?'selected':''}>${t}</option>`).join('')}</select>
+  <div class="cards"><div class="card">Pedidos<b>${P.length}</b></div><div class="card">Faturamento<b>${brl(fat)}</b></div>
+  <div class="card">Custo dos produtos<b>${brl(cus)}</b></div><div class="card">Despesas<b>${brl(des)}</b></div>
+  <div class="card" style="grid-column:span 2">Lucro<b style="color:${luc<0?'#ff8a7a':'#7be08a'}">${brl(luc)}</b><small>${P.length?'Ticket médio '+brl(fat/P.length):''}</small></div></div>
+  <h2>Mais vendidos</h2>${tops.map(([n,q])=>`<div class="row"><span>${esc(n)}</span><b>${q}x</b></div>`).join('')||'<p>Sem vendas no período.</p>'}
+  <h2>Despesas (luz, gás, funcionário…)</h2><div class="bt"><input id="dd" placeholder="Descrição"><input id="dv" inputmode="decimal" placeholder="Valor"><button id="da" style="flex:none">Add</button></div>
+  ${X.map(e=>`<div class="row"><div>${esc(e.descricao)}<small>${new Date(e.data+'T12:00').toLocaleDateString('pt-BR')}</small></div><b>${brl(e.valor)}</b><button class="r" data-d="${e.id}">✕</button></div>`).join('')}`;
+  $('#per').onchange=e=>{per=e.target.value;fin()};
+  $('#da').onclick=async()=>{const v=parseFloat($('#dv').value.replace(',','.'));if(!$('#dd').value||isNaN(v))return;await db.collection('despesas').add({descricao:$('#dd').value,valor:v,data:new Date().toLocaleDateString('sv')});fin()};
+  document.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{await db.collection('despesas').doc(b.dataset.d).delete();fin()});
+}
+iniciar();
+</script></body></html>
